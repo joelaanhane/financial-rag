@@ -59,5 +59,9 @@ Answer: The biggest risk factors in 2024 for ING include:
 1. Geopolitical risk
 2. People risk
 3. Cybercrime
-...
+4. Inflation risk
+5. IT risk
+6. Model risk
+
+Sources: pages [159, 161, 214, 428]
 ```
