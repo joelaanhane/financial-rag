@@ -11,17 +11,20 @@ client = OpenAI(api_key=os.getenv("OPENAI_API_KEY"))
 
 def load_pdf(path):
     doc = fitz.open(path)
-    text = ""
-    for page in doc:
-        text += page.get_text()
-    return text
+    pages = []
+    for page_num, page in enumerate(doc):
+        text = page.get_text()
+        pages.append({"text": text, "page_num": page_num + 1})
+    return pages
 
-def chunk_text(text, chunk_size=500, overlap=50):
-    words = text.split()
+def chunk_text(pages, chunk_size=500, overlap=50):
     chunks = []
-    for i in range(0, len(words), chunk_size - overlap):
-        chunk = " ".join(words[i:i + chunk_size])
-        chunks.append(chunk)
+    for page in pages:
+        words = page["text"].split()
+        for i in range(0, len(words), chunk_size - overlap):
+            chunk = " ".join(words[i:i + chunk_size])
+            if chunk:
+                chunks.append({"text": chunk, "page": page["page_num"]})
     return chunks
 
 def get_embeddings(chunks):
@@ -29,7 +32,7 @@ def get_embeddings(chunks):
     for chunk in chunks:
         response = client.embeddings.create(
             model="text-embedding-3-small",
-            input=chunk
+            input=chunk["text"]
         )
         embeddings.append(response.data[0].embedding)
     return np.array(embeddings, dtype="float32")
@@ -50,7 +53,8 @@ def search(query, chunks, index, k=5):
 
 def answer_question(query, chunks, index):
     relevant_chunks = search(query, chunks, index)
-    context = "\n\n".join(relevant_chunks)
+    context = "\n\n".join([c["text"] for c in relevant_chunks])
+    pages = sorted(set([c["page"] for c in relevant_chunks]))
     response = client.chat.completions.create(
         model="gpt-4o-mini",
         messages=[
@@ -58,7 +62,8 @@ def answer_question(query, chunks, index):
             {"role": "user", "content": f"Context:\n{context}\n\nQuestion: {query}"}
         ]
     )
-    return response.choices[0].message.content
+    answer = response.choices[0].message.content
+    return f"{answer}\n\nSources: pages {pages}"
 
 EMBEDDINGS_FILE = "embeddings.npy"
 CHUNKS_FILE = "chunks.pkl"
@@ -71,9 +76,9 @@ if os.path.exists(EMBEDDINGS_FILE) and os.path.exists(CHUNKS_FILE):
     print(f"Loaded {len(chunks)} chunks")
 else:
     print("Processing PDF...")
-    text = load_pdf("annual_report.pdf")
-    print(f"PDF loaded: {len(text)} characters")
-    chunks = chunk_text(text)
+    pages = load_pdf("annual_report.pdf")
+    print(f"PDF loaded: {len(pages)} pages")
+    chunks = chunk_text(pages)
     print(f"Number of chunks: {len(chunks)}")
     print("Creating embeddings... (this may take a while)")
     embeddings = get_embeddings(chunks)
