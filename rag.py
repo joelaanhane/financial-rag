@@ -4,6 +4,7 @@ import fitz
 import numpy as np
 import faiss
 from openai import OpenAI
+import pickle
 
 load_dotenv()
 client = OpenAI(api_key=os.getenv("OPENAI_API_KEY"))
@@ -59,19 +60,36 @@ def answer_question(query, chunks, index):
     )
     return response.choices[0].message.content
 
-text = load_pdf("annual_report.pdf")
-print(f"PDF loaded: {len(text)} characters")
+EMBEDDINGS_FILE = "embeddings.npy"
+CHUNKS_FILE = "chunks.pkl"
 
-chunks = chunk_text(text)
-print(f"Number of chunks: {len(chunks)}")
-
-print("Creating embeddings... (this may take a while)")
-embeddings = get_embeddings(chunks)
-print(f"Embeddings ready: {embeddings.shape}")
+if os.path.exists(EMBEDDINGS_FILE) and os.path.exists(CHUNKS_FILE):
+    print("Loading saved embeddings...")
+    embeddings = np.load(EMBEDDINGS_FILE)
+    with open(CHUNKS_FILE, "rb") as f:
+        chunks = pickle.load(f)
+    print(f"Loaded {len(chunks)} chunks")
+else:
+    print("Processing PDF...")
+    text = load_pdf("annual_report.pdf")
+    print(f"PDF loaded: {len(text)} characters")
+    chunks = chunk_text(text)
+    print(f"Number of chunks: {len(chunks)}")
+    print("Creating embeddings... (this may take a while)")
+    embeddings = get_embeddings(chunks)
+    np.save(EMBEDDINGS_FILE, embeddings)
+    with open(CHUNKS_FILE, "wb") as f:
+        pickle.dump(chunks, f)
+    print("Embeddings saved")
 
 index = build_index(embeddings)
 print("FAISS index built")
 
-print("\nAsking a question...")
-answer = answer_question("What are the biggest risk factors?", chunks, index)
-print(answer)
+print("\nAnnualSight ready. Type your question or 'quit' to exit.\n")
+
+while True:
+    query = input("Question: ")
+    if query.lower() == "quit":
+        break
+    answer = answer_question(query, chunks, index)
+    print(f"\nAnswer: {answer}\n")
