@@ -19,6 +19,14 @@ DOCUMENTS = {
 }
 
 def load_or_create_index(name, path):
+    """Load saved embeddings and chunks from disk, or create them from a PDF.
+    
+    Args:
+        name: Short name for the document, used as filename prefix.
+        path: Path to the PDF file.
+    Returns:
+        Tuple of (chunks, faiss_index).
+    """
     embeddings_file = f"{name}_embeddings.npy"
     chunks_file = f"{name}_chunks.pkl"
     
@@ -79,11 +87,12 @@ prompt = ChatPromptTemplate.from_messages([
 agent = create_openai_tools_agent(llm, tools, prompt)
 executor = AgentExecutor(agent=agent, tools=tools, verbose=True)
 
-print("AnnualSight Agent ready. Type your question or 'quit' to exit.\n")
+if __name__ == "__main__":
+    print("AnnualSight Agent ready. Type your question or 'quit' to exit.\n")
 
-while True:
-    query = input("Question: ")
-    if query.lower() == "quit":
-        break
-    result = executor.invoke({"input": query})
-    print(f"\nAnswer: {result['output']}\n")
+    while True:
+        query = input("Question: ")
+        if query.lower() == "quit":
+            break
+        result = executor.invoke({"input": query})
+        print(f"\nAnswer: {result['output']}\n")

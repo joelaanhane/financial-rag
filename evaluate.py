@@ -10,17 +10,18 @@ client = OpenAI(api_key=os.getenv("OPENAI_API_KEY"))
 test_cases = [
     {
         "question": "What was Rabobank's net profit in 2024?",
-        "expected": "5098"
+        "expected": "EUR 5163 million"
     },
     {
         "question": "What are the biggest risk factors for ING in 2024?",
-        "expected": "geopolitical"
+        "expected": "geopolitical risk, people risk, cybercrime, inflation risk, IT risk, and model risk."
     },
     {
         "question": "What is ING's CET1 ratio in 2024?",
-        "expected": "13"
+        "expected": "13.6%"
     }
 ]
+
 
 def get_answer_with_chunks(question, bank):
     """Get an answer and the retrieved context chunks for a question.
@@ -61,6 +62,25 @@ def judge_answer(question, answer, context):
     )
     return response.choices[0].message.content.strip()
 
+def judge_correctness(question, answer, expected):
+    """Use an LLM to evaluate whether an answer is semantically correct.
+    
+    Args:
+        question: The original question.
+        answer: The answer to evaluate.
+        expected: The expected correct answer.
+    Returns:
+        'CORRECT' or 'INCORRECT'.
+    """
+    response = client.chat.completions.create(
+        model="gpt-4o-mini",
+        messages=[
+            {"role": "system", "content": "You are an evaluator. Given a question, an answer, and an expected answer, determine if the answer is semantically correct. Reply with only 'CORRECT' or 'INCORRECT'."},
+            {"role": "user", "content": f"Question: {question}\n\nAnswer: {answer}\n\nExpected: {expected}"}
+        ]
+    )
+    return response.choices[0].message.content.strip()
+
 print("Running evaluation...\n")
 results = []
 
@@ -68,8 +88,8 @@ for test in test_cases:
     bank = "rabobank" if "rabobank" in test["question"].lower() else "ing"
     answer, context = get_answer_with_chunks(test["question"], bank)
     grounded = judge_answer(test["question"], answer, context)
-    correct = test["expected"].lower() in answer.lower()
-    
+    correct = judge_correctness(test["question"], answer, test["expected"])   
+
     results.append({
         "question": test["question"],
         "answer": answer,
@@ -84,7 +104,7 @@ for test in test_cases:
     print("-" * 50)
 
 grounded_count = sum(1 for r in results if r["grounded"] == "GROUNDED")
-correct_count = sum(1 for r in results if r["correct"])
+correct_count = sum(1 for r in results if r["correct"] == "CORRECT")
 
 print(f"\nResults: {correct_count}/{len(results)} correct")
 print(f"Grounded: {grounded_count}/{len(results)} grounded in source documents")
