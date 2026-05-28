@@ -10,6 +10,7 @@ load_dotenv()
 client = OpenAI(api_key=os.getenv("OPENAI_API_KEY"))
 
 def load_pdf(path):
+    
     doc = fitz.open(path)
     pages = []
     for page_num, page in enumerate(doc):
