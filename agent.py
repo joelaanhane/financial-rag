@@ -1,5 +1,5 @@
 from dotenv import load_dotenv
-import ospython
+import os
 import pickle
 import numpy as np
 import faiss
