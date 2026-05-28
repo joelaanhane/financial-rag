@@ -5,3 +5,5 @@ __pycache__/
 *.pdf
 chunks.pkl
 embeddings.npy
+*_embeddings.npy
+*_chunks.pkl
