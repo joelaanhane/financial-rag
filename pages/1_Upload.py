@@ -1,19 +1,35 @@
 import streamlit as st
 import tempfile
 import os
+from datetime import date
 from rag import load_pdf, chunk_text, get_embeddings
-from storage import save_report, report_exists
+from storage import save_report, report_exists, known_banks, find_canonical_name
 
 st.set_page_config(page_title="Upload — AnnualSight", page_icon="📤", layout="wide")
 
 st.title("📤 Upload Annual Report")
 st.caption("Upload a PDF to process and store it in the library.")
 
+ADD_NEW = "+ Add new bank"
+current_year = date.today().year
+years = [str(y) for y in range(current_year, current_year - 50, -1)]
+
 col1, col2 = st.columns(2)
 with col1:
-    bank_name = st.text_input("Bank name", placeholder="e.g. ING, ABN AMRO, Rabobank")
+    banks = known_banks()
+    if banks:
+        choice = st.selectbox("Bank name", banks + [ADD_NEW])
+        bank_name = st.text_input("New bank name", placeholder="e.g. Deutsche Bank") if choice == ADD_NEW else choice
+    else:
+        bank_name = st.text_input("Bank name", placeholder="e.g. ING, ABN AMRO, Rabobank")
+
+    if bank_name:
+        canonical = find_canonical_name(bank_name)
+        if canonical and canonical != bank_name:
+            st.info(f"This matches **{canonical}** already in your library — using that name for consistency.")
+            bank_name = canonical
 with col2:
-    year = st.selectbox("Year", ["2024", "2023", "2022", "2021"])
+    year = st.selectbox("Year", years)
 
 uploaded_file = st.file_uploader("Choose a PDF file", type="pdf")
 
