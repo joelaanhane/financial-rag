@@ -66,7 +66,8 @@ if st.button("Process and save", type="primary", disabled=not (uploaded_file and
             st.write(f"Created **{len(chunks)} chunks** (500 words, 50 overlap).")
 
             st.write("Creating embeddings via OpenAI... (this may take a minute)")
-            embeddings = get_embeddings(chunks)
+            progress_bar = st.progress(0)
+            embeddings = get_embeddings(chunks, progress_callback=lambda p: progress_bar.progress(p))
             st.write(f"Embeddings shape: {embeddings.shape}")
 
             st.write("Saving to library...")

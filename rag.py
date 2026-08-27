@@ -43,21 +43,26 @@ def chunk_text(pages, chunk_size=500, overlap=50):
                 chunks.append({"text": chunk, "page": page["page_num"]})
     return chunks
 
-def get_embeddings(chunks):
+def get_embeddings(chunks, progress_callback=None):
     """Convert a list of text chunks into OpenAI embedding vectors.
-    
+
     Args:
         chunks: List of chunk dicts with 'text' key.
+        progress_callback: Optional function that receives a float between 0 and 1
+            representing the fraction of chunks processed. Called after each chunk.
+            Useful for updating a progress bar in a UI.
     Returns:
         Numpy array of shape (n_chunks, 1536) with float32 embeddings.
     """
     embeddings = []
-    for chunk in chunks:
+    for i, chunk in enumerate(chunks):
         response = client.embeddings.create(
             model="text-embedding-3-small",
             input=chunk["text"]
         )
         embeddings.append(response.data[0].embedding)
+        if progress_callback:
+            progress_callback((i + 1) / len(chunks))
     return np.array(embeddings, dtype="float32")
 
 def build_index(embeddings):
