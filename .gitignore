@@ -7,3 +7,4 @@ chunks.pkl
 embeddings.npy
 *_embeddings.npy
 *_chunks.pkl
+reports/
